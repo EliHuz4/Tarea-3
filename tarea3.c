@@ -37,7 +37,9 @@ typedef struct {
 } TipoJugador;
 
 int comparar_enteros(void* a, void* b) {
-    return *(int*)a == *(int*)b;
+    int* key1 = (int*)a;
+    int* key2 = (int*)b;
+    return (*key1 == *key2);
 }
 
 bool leer_escenarios(Map** escenarios) {
@@ -69,17 +71,6 @@ bool leer_escenarios(Map** escenarios) {
         esc->nombre[sizeof(esc->nombre) - 1] = '\0';
         strncpy(esc->descripcion, campos[2], sizeof(esc->descripcion) - 1);
         esc->descripcion[sizeof(esc->descripcion) - 1] = '\0';
-
-
-
-
-
-        printf("DEBUG: NOMBRE ESCENARIO %s\n", esc->nombre);
-        printf("DEBUG: DESCRIPCION ESCENARIO %s\n", esc->descripcion);
-
-
-
-
 
         esc->items = item_list;
         esc->conexiones[0] = atoi(campos[4]);
@@ -147,7 +138,18 @@ bool leer_escenarios(Map** escenarios) {
   return true; //retorna true para verificar luego si es que ya se leyó el archivo
 }
 
+void imprimir_ids(Map* escenarios) {
+    MapPair* pair = map_first(escenarios);
+    while (pair != NULL) {
+        int* id = pair->key;
+        Escenario* esc = pair->value;
+        printf("ID: %d, Nombre: %s\n", *id, esc->nombre);
+        pair = map_next(escenarios);
+    }
+}
+
 void avanzar_direccion(TipoJugador* jugador, Map* escenarios) {
+
     printf("\nHacia donde deseas avanzar?\n");
     printf("1. Arriba\n");
     printf("2. Abajo\n");
@@ -165,12 +167,16 @@ void avanzar_direccion(TipoJugador* jugador, Map* escenarios) {
     }
 
     int siguiente_id = jugador->escenario_actual->conexiones[direccion - 1];
+    int* clave_busqueda = malloc(sizeof(int));
+    *clave_busqueda = siguiente_id;
+    Escenario* siguiente_escenario = (Escenario*)map_search(escenarios, clave_busqueda);
+
+    free(clave_busqueda);
     if (siguiente_id == -1) {
         printf("No puedes avanzar en esa direccion.\n");
         return;
     }
 
-    Escenario* siguiente_escenario = (Escenario*) map_search(escenarios, &siguiente_id);
     if (!siguiente_escenario) {
         printf("Error: escenario destino no encontrado.\n");
         return;
@@ -203,20 +209,26 @@ void avanzar_direccion(TipoJugador* jugador, Map* escenarios) {
 }
 
 void mostrar_estado(TipoJugador *Jugador){
-    Escenario* esc = Jugador->escenario_actual;
-    printf("=== Estado Actual ===\n");
-    printf("Escenario - %s -\n",esc->nombre);
-    printf("%s\n", esc->descripcion);
-    printf("Items de - %s -", esc->nombre);
 
+    if (Jugador->escenario_actual == NULL) {
+        printf("ERROR: Escenario actual es NULL\n");
+        return;
+    }
+
+    Escenario* esc = Jugador->escenario_actual;
+    printf("\n=== Estado Actual ===\n\n");
+    printf("Escenario - %s -\n",esc->nombre);
+    printf("%s\n\n", esc->descripcion);
+    printf("Items de - %s -\n", esc->nombre);
+    
     bool hayItems = false;
 
     for (Item* item = list_first(esc->items); item != NULL; item = list_next(esc->items)) {
-        printf("    - %s (Valor: %d, Peso: %d)\n", item->nombre, item->valor, item->peso);
+        printf("  - %s (Valor: %d, Peso: %d)\n", item->nombre, item->valor, item->peso);
         hayItems = true;
     }
 
-    if (!hayItems) printf("    - No hay items disponibles.\n");
+    if (!hayItems) printf("  - No hay items disponibles.\n");
 
      // Tiempo restante
     printf("\n- Tiempo restante: %d\n", Jugador->tiempo_restante);
@@ -224,10 +236,10 @@ void mostrar_estado(TipoJugador *Jugador){
     // Inventario del jugador
     printf("\n- Inventario del jugador:\n");
     if (list_size(Jugador->inventario) == 0) {
-        printf("    - Inventario vacio.\n");
+        printf("  - Inventario vacio.\n");
     } else {
         for (Item* i = list_first(Jugador->inventario); i != NULL; i = list_next(Jugador->inventario)) {
-            printf("    - %s (Valor: %d, Peso: %d)\n", i->nombre, i->valor, i->peso);
+            printf("  - %s (Valor: %d, Peso: %d)\n", i->nombre, i->valor, i->peso);
         }
     }
 
@@ -248,26 +260,26 @@ void mostrar_estado(TipoJugador *Jugador){
 // Funcion que da comienzo a una nueva partida
 void iniciar_partida(Map* escenarios) {
     TipoJugador* jugador = malloc(sizeof(TipoJugador));
+
     jugador->inventario = list_create();
     jugador->peso_total = 0;
     jugador->puntaje = 0;
     jugador->tiempo_restante = 10;
 
     int id_inicio = 1;
-    jugador->escenario_actual = (Escenario*) map_search(escenarios, &id_inicio);
-    if(jugador->escenario_actual)
-    {
-        printf("DEBUG: ESCENARIO ACTUAL %s\n", jugador->escenario_actual->nombre);
-        printf("DEBUG: DESCRIPCION ACTUAL %s\n", jugador->escenario_actual->descripcion);
+    MapPair* par = map_first(escenarios);
+    while (par != NULL) {
+        int* clave = par->key;
+        if (*clave == id_inicio) {
+            jugador->escenario_actual = (Escenario*) par->value;
+            break;
+        }
+        par = map_next(escenarios);
     }
-    else{
-        printf("NO ESTA\n");
-    }
-
 
     int opcion;
     while (1) {
-        mostrar_estado(jugador);
+        mostrar_estado(jugador); // Muestra el estado actual de el jugador junto a las caracteristicas del escenario
         printf("\n=== Opciones ===\n");
         printf("1. Recoger item(s)\n");
         printf("2. Descartar item(s)\n");
@@ -290,17 +302,24 @@ void iniciar_partida(Map* escenarios) {
                 break;
 
             case 3:
-                avanzar_direccion(jugador,escenarios);
+                avanzar_direccion(jugador,escenarios); // ESTA OPCION TIENE ERRORES
                 break;
             case 4:
-                printf("Reiniciando partida...\n");
+                printf("Reiniciando partida...\n"); // ESTA OPCION TIENE ERRORES
                 list_clean(jugador->inventario);
                 jugador->peso_total = 0;
                 jugador->puntaje = 0;
                 jugador->tiempo_restante = 10;
-                jugador->escenario_actual = (Escenario*) map_search(escenarios, &id_inicio);
+                
+                int* clave_reinicio = malloc(sizeof(int));
+                *clave_reinicio = id_inicio;
+                jugador->escenario_actual = (Escenario*)map_search(escenarios, clave_reinicio);
+                free(clave_reinicio);
+                
+                if (!jugador->escenario_actual) {
+                    printf("Error al reiniciar: no se encontró el escenario inicial\n");
+                }
                 break;
-
             case 5:
                 printf("Saliendo del juego...\n");
                 return;
