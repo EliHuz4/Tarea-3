@@ -167,14 +167,21 @@ void avanzar_direccion(TipoJugador* jugador, Map* escenarios) {
     }
 
     int siguiente_id = jugador->escenario_actual->conexiones[direccion - 1];
-    int* clave_busqueda = malloc(sizeof(int));
-    *clave_busqueda = siguiente_id;
-    Escenario* siguiente_escenario = (Escenario*)map_search(escenarios, clave_busqueda);
 
-    free(clave_busqueda);
     if (siguiente_id == -1) {
         printf("No puedes avanzar en esa direccion.\n");
         return;
+    }
+
+    Escenario* siguiente_escenario = NULL;
+    MapPair* par = map_first(escenarios);
+    while (par != NULL) {
+        int* key = par->key;
+        if (*key == siguiente_id) {
+            siguiente_escenario = (Escenario*) par->value;
+            break;
+        }
+        par = map_next(escenarios);
     }
 
     if (!siguiente_escenario) {
@@ -183,7 +190,7 @@ void avanzar_direccion(TipoJugador* jugador, Map* escenarios) {
     }
 
     int peso = jugador->peso_total;
-    int tiempo_usado = (peso + 1 + 9) / 10;
+    int tiempo_usado = (peso + 10) / 10;
     jugador->tiempo_restante -= tiempo_usado;
 
     jugador->escenario_actual = siguiente_escenario;
@@ -256,6 +263,38 @@ void mostrar_estado(TipoJugador *Jugador){
     }
 }
 
+void reiniciar_partida(TipoJugador *jugador, Map *Esc, int id_inicio){
+    printf("\nReiniciando partida...\n");
+
+    // Liberar cada item del inventario
+    for (Item* i = list_first(jugador->inventario); i != NULL; i = list_next(jugador->inventario)) {
+        free(i);
+    }
+
+    // Limpiar la lista del inventario
+    list_clean(jugador->inventario);
+
+    // Reiniciar valores del jugador
+    jugador->peso_total = 0;
+    jugador->puntaje = 0;
+    jugador->tiempo_restante = 10;
+
+    // Buscar el escenario inicial
+    MapPair* par = map_first(Esc);
+    while (par != NULL) {
+        int* key = par->key;
+        if (*key == id_inicio) {
+            jugador->escenario_actual = (Escenario*) par->value;
+            break;
+        }
+        par = map_next(Esc);
+    }
+    if (jugador->escenario_actual->id == id_inicio) {
+        printf("¡Partida reiniciada correctamente! Has vuelto al escenario inicial.\n");
+    } else {
+        printf("Error al reiniciar: no se encontró el escenario inicial (ID %d).\n", id_inicio);
+    }
+}
 
 // Funcion que da comienzo a una nueva partida
 void iniciar_partida(Map* escenarios) {
@@ -302,23 +341,10 @@ void iniciar_partida(Map* escenarios) {
                 break;
 
             case 3:
-                avanzar_direccion(jugador,escenarios); // ESTA OPCION TIENE ERRORES
+                avanzar_direccion(jugador,escenarios);// Avanza en una direccion elegida por el usuario
                 break;
             case 4:
-                printf("Reiniciando partida...\n"); // ESTA OPCION TIENE ERRORES
-                list_clean(jugador->inventario);
-                jugador->peso_total = 0;
-                jugador->puntaje = 0;
-                jugador->tiempo_restante = 10;
-                
-                int* clave_reinicio = malloc(sizeof(int));
-                *clave_reinicio = id_inicio;
-                jugador->escenario_actual = (Escenario*)map_search(escenarios, clave_reinicio);
-                free(clave_reinicio);
-                
-                if (!jugador->escenario_actual) {
-                    printf("Error al reiniciar: no se encontró el escenario inicial\n");
-                }
+                reiniciar_partida(jugador, escenarios, id_inicio); // Reinicia la pertida y todos los parametros de el jugador
                 break;
             case 5:
                 printf("Saliendo del juego...\n");
