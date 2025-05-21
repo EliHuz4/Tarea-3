@@ -44,56 +44,105 @@ bool leer_escenarios(Map** escenarios) {
     // Intenta abrir el archivo CSV que contiene datos de películas
     FILE *archivo = fopen("data/graphquest.csv", "r");
     if (archivo == NULL) {
-        perror(
-            "Error al abrir el archivo"); // Informa si el archivo no puede abrirse
+        perror("Error al abrir el archivo"); // Informa si el archivo no puede abrirse
         return false;
     }
-    leer_linea_csv(archivo, ','); // Lee la cabecera de el CSV para no contabilizarla las tarde
 
-    char **campos = leer_linea_csv(archivo, ',');
+    leer_linea_csv(archivo, ','); // Lee la cabecera de el CSV para no contabilizarla las tarde
+    *escenarios = map_create(comparar_enteros);
+    char **campos;
     // Leer y parsear una línea del archivo CSV. La función devuelve un array de
     // strings, donde cada elemento representa un campo de la línea CSV procesada.
-    *escenarios = map_create(comparar_enteros);
+    
     // Lee cada línea del archivo CSV hasta el final
-    while ((campos = leer_linea_csv(archivo, ',')) != NULL) {
 
+    int contador_lineas = 0;
+
+    while ((campos = leer_linea_csv(archivo, ',')) != NULL) {
         List* preItems = split_string(campos[3], ";");
         List* item_list = list_create();
         Escenario* esc = malloc(sizeof(Escenario));
+
         esc->id = atoi(campos[0]);
-        strcpy(esc->nombre, campos[1]);
-        strcpy(esc->descripcion, campos[2]);
+
+        strncpy(esc->nombre, campos[1], sizeof(esc->nombre) - 1);
+        esc->nombre[sizeof(esc->nombre) - 1] = '\0';
+        strncpy(esc->descripcion, campos[2], sizeof(esc->descripcion) - 1);
+        esc->descripcion[sizeof(esc->descripcion) - 1] = '\0';
+
+
+
+
+
+        printf("DEBUG: NOMBRE ESCENARIO %s\n", esc->nombre);
+        printf("DEBUG: DESCRIPCION ESCENARIO %s\n", esc->descripcion);
+
+
+
+
+
         esc->items = item_list;
         esc->conexiones[0] = atoi(campos[4]);
         esc->conexiones[1] = atoi(campos[5]);
         esc->conexiones[2] = atoi(campos[6]);
         esc->conexiones[3] = atoi(campos[7]);
-        esc->es_final = atoi(campos[8]);
-
-        map_insert(*escenarios, &esc->id, esc);
+        esc->es_final = (strcmp(campos[8], "Si") == 0);
         
-        for (char *item = list_first(preItems); item != NULL; item = list_next(preItems)) {
-        List* values = split_string(item, ",");
-        if (list_size(values) < 3) {
-            list_clean(values);
-            free(values);
-            continue;
+        int *id_clave = (int*) malloc(sizeof(int));
+        if (id_clave == NULL) {
+            perror("Error al asignar memoria para la clave ID");
+            free(esc);
+            fclose(archivo);
+            return false;
         }
 
-        Item* new_item = malloc(sizeof(Item));
-        strcpy(new_item->nombre, list_first(values));
-        new_item->valor = atoi(list_next(values));
-        new_item->peso = atoi(list_next(values));
+        *id_clave = esc->id;
+        map_insert(*escenarios, id_clave, esc);
         
-        list_pushBack(item_list, new_item);
+        for (char *item = list_first(preItems); item != NULL; item = list_next(preItems)) {
+            List* values = split_string(item, ",");
+            if (list_size(values) < 3) {
+                for (char *val = list_first(values); val != NULL; val = list_next(values)) {
+                    free(val);
+                }
+                list_clean(values);
+                free(values);
+                continue;
+            }
 
-        list_clean(values);
-        free(values);
-    }
+            Item* new_item = malloc(sizeof(Item));
+            if (new_item == NULL) {
+                printf("Error: No se pudo asignar memoria para Item.\n");
+                fclose(archivo);
+                return false;
+            }
+
+            strncpy(new_item->nombre, list_first(values), sizeof(new_item->nombre) - 1);
+            new_item->nombre[sizeof(new_item->nombre) - 1] = '\0';
+            new_item->valor = atoi(list_next(values));
+            new_item->peso = atoi(list_next(values));
+
+            list_pushBack(item_list, new_item);
+
+            for (char *val = list_first(values); val != NULL; val = list_next(values)) {
+                free(val);
+            }
+
+            list_clean(values);
+            free(values);
+        }
+
+        for (char *p_item_str = list_first(preItems); p_item_str != NULL; p_item_str = list_next(preItems)) {
+            free(p_item_str);
+        }
         list_clean(preItems);
         free(preItems);
-    
-  }
+
+        for (int i = 0; campos[i] != NULL; i++) {
+            free(campos[i]);
+        }
+        free(campos);
+    }
   fclose(archivo); // Cierra el archivo después de leer todas las líneas
   return true; //retorna true para verificar luego si es que ya se leyó el archivo
 }
@@ -163,8 +212,8 @@ void mostrar_estado(TipoJugador *Jugador){
     bool hayItems = false;
 
     for (Item* item = list_first(esc->items); item != NULL; item = list_next(esc->items)) {
-    printf("    - %s (Valor: %d, Peso: %d)\n", item->nombre, item->valor, item->peso);
-    hayItems = true;
+        printf("    - %s (Valor: %d, Peso: %d)\n", item->nombre, item->valor, item->peso);
+        hayItems = true;
     }
 
     if (!hayItems) printf("    - No hay items disponibles.\n");
@@ -204,7 +253,17 @@ void iniciar_partida(Map* escenarios) {
     jugador->puntaje = 0;
     jugador->tiempo_restante = 10;
 
-    jugador->escenario_actual = (Escenario*) map_search(escenarios, &(int){1});
+    int id_inicio = 1;
+    jugador->escenario_actual = (Escenario*) map_search(escenarios, &id_inicio);
+    if(jugador->escenario_actual)
+    {
+        printf("DEBUG: ESCENARIO ACTUAL %s\n", jugador->escenario_actual->nombre);
+        printf("DEBUG: DESCRIPCION ACTUAL %s\n", jugador->escenario_actual->descripcion);
+    }
+    else{
+        printf("NO ESTA\n");
+    }
+
 
     int opcion;
     while (1) {
@@ -221,13 +280,13 @@ void iniciar_partida(Map* escenarios) {
 
         switch (opcion) {
             case 1:
-                // A implementar: recoger_item(&jugador);
-                jugador->tiempo_restante--;
+                // A implementar: recoger_item(jugador);
+                //jugador->tiempo_restante--;
                 break;
 
             case 2:
-                // A implementar: descartar_item(&jugador);
-                jugador->tiempo_restante--;
+                // A implementar: descartar_item(jugador);
+                //jugador->tiempo_restante--;
                 break;
 
             case 3:
@@ -239,7 +298,7 @@ void iniciar_partida(Map* escenarios) {
                 jugador->peso_total = 0;
                 jugador->puntaje = 0;
                 jugador->tiempo_restante = 10;
-                jugador->escenario_actual = (Escenario*) map_search(escenarios, &(int){1});
+                jugador->escenario_actual = (Escenario*) map_search(escenarios, &id_inicio);
                 break;
 
             case 5:
