@@ -296,6 +296,94 @@ void reiniciar_partida(TipoJugador *jugador, Map *Esc, int id_inicio){
     }
 }
 
+void recoger_items(TipoJugador* jugador){
+    List* items = jugador->escenario_actual->items;
+
+    if (list_size(items) == 0){
+        printf("No hay items en el escenario.\n");
+        return;
+    }
+
+    printf("\nItems en el escenario:\n");
+    int index = 1;
+    List* copia_items = list_create();  // Copia temporal para recorrer sin modificar original
+    for (Item* item = list_first(items); item != NULL; item = list_next(items)) {
+        printf("%d. %s (Valor: %d - Peso: %d)\n", index++, item->nombre, item->valor, item->peso);
+        list_pushBack(copia_items, item);  // Guardamos los punteros para recorrer después
+    }
+
+    printf("\nIngresa los numeros de los items que quieres en tu inventario (separados por espacios, con el caracter 0 cancelas):\n");
+
+    char buffer[260];
+    fgets(buffer, sizeof(buffer), stdin);
+
+    char* token = strtok(buffer, " ");
+    int seleccionados = 0;
+
+    List* nuevos_items = list_create(); // Para guardar los items a eliminar del escenario
+
+    index = 1;
+    for (Item* item = list_first(copia_items); item != NULL; item = list_next(copia_items), index++) {
+        for (char* t = token; t != NULL; t = strtok(NULL, " ")) {
+            int opt = atoi(t);
+            if (opt == 0) {
+                list_clean(copia_items);
+                free(copia_items);
+                list_clean(nuevos_items);
+                free(nuevos_items);
+                return;  // Cancelar
+            }
+            if (opt == index) {
+                // Copiar el item y agregarlo al inventario
+                Item* copia = malloc(sizeof(Item));
+                strcpy(copia->nombre, item->nombre);
+                copia->valor = item->valor;
+                copia->peso = item->peso;
+
+                list_pushBack(jugador->inventario, copia);
+                jugador->peso_total += copia->peso;
+                jugador->puntaje += copia->valor;
+                list_pushBack(nuevos_items, item);  // Marcar para eliminar
+                seleccionados++;
+                break;
+            }
+        }
+        token = buffer;  // Reinicia el token en cada iteración
+    }
+
+    // Eliminar items seleccionados del escenario
+    Item* item_actual = list_first(items);
+    while (item_actual != NULL) {
+        int eliminar = 0;
+        for (Item* marcado = list_first(nuevos_items); marcado != NULL; marcado = list_next(nuevos_items)) {
+            if (item_actual == marcado) {
+                eliminar = 1;
+                break;
+            }
+        }
+
+        if (eliminar) {
+            list_popCurrent(items);  // Elimina el actual
+            item_actual = list_first(items);  // Reinicia la iteración desde el comienzo
+        } else {
+            item_actual = list_next(items);
+        }
+    }
+
+    list_clean(copia_items);
+    free(copia_items);
+    list_clean(nuevos_items);
+    free(nuevos_items);
+
+    if (seleccionados > 0) {
+        jugador->tiempo_restante -= 1;
+        printf("%d item(s) recogido(s) - Tiempo restante: %d\n", seleccionados, jugador->tiempo_restante);
+    } else {
+        printf("No se recogio ningun item valido.\n");
+    }
+}
+
+
 // Funcion que da comienzo a una nueva partida
 void iniciar_partida(Map* escenarios) {
     TipoJugador* jugador = malloc(sizeof(TipoJugador));
@@ -331,8 +419,7 @@ void iniciar_partida(Map* escenarios) {
 
         switch (opcion) {
             case 1:
-                // A implementar: recoger_item(jugador);
-                //jugador->tiempo_restante--;
+                recoger_items(jugador); // Actualiza el inventario si es que el jugador asi lo quiere
                 break;
 
             case 2:
@@ -352,11 +439,6 @@ void iniciar_partida(Map* escenarios) {
 
             default:
                 printf("Opcion invalida :(\n");
-        }
-
-        if (jugador->tiempo_restante <= 0) {
-            printf("\nSe acabo el tiempo! ESTAS MUERTO.\n");
-            return;
         }
 
         if (jugador->escenario_actual->es_final) {
