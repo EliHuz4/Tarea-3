@@ -18,6 +18,7 @@ typedef struct Escenario {
     char nombre[100];
     char descripcion[300];
     List* items;
+    List* items_originales;
     struct Escenario* arriba;
     struct Escenario* abajo;
     struct Escenario* izquierda;
@@ -93,6 +94,25 @@ bool leer_escenarios(Map** escenarios) {
         esc->derecha = NULL;
         
         esc->es_final = (strcmp(campos[8], "Si") == 0);
+
+        // Crear lista para items_originales
+        esc->items_originales = list_create();
+        if (esc->items_originales == NULL) {
+            perror("Error al crear lista items_originales");
+            free(esc);
+            for (char *p_item_str = list_first(preItems); p_item_str != NULL; p_item_str = list_next(preItems)) {
+                free(p_item_str);
+            }
+            list_clean(preItems);
+            free(preItems);
+            for (int i = 0; campos[i] != NULL; i++) {
+                free(campos[i]);
+            }
+            free(campos);
+            fclose(archivo);
+            return false;
+        }
+        
         
         int *id_clave = (int*) malloc(sizeof(int));
         if (id_clave == NULL) {
@@ -247,12 +267,12 @@ void avanzar_direccion(TipoJugador* jugador, Map* escenarios) {
     printf("Tiempo restante: %d\n", jugador->tiempo_restante);
 
     if (jugador->tiempo_restante <= 0) {
-        printf("\nSe acabó el tiempo! GAME OVER.\n");
+        printf("\nSe acabo el tiempo! GAME OVER.\n");
         return;
     }
 
     if (siguiente_escenario->es_final) {
-        printf("\n¡Has llegado al escenario final!\n");
+        printf("\nHas llegado al escenario final!\n");
         printf("Inventario final:\n");
         for (Item* i = list_first(jugador->inventario); i != NULL; i = list_next(jugador->inventario)) {
             printf(" - %s\n", i->nombre);
@@ -317,27 +337,69 @@ void mostrar_estado(TipoJugador *Jugador){
         printf("   - Derecha: (No hay camino)\n");
 }
 
-void reiniciar_partida(TipoJugador *jugador, Map *Esc, int id_inicio){
-    printf("\nReiniciando partida...\n");
+void reiniciar_partida(TipoJugador *jugador, Map *Esc, int id_inicio) {
+    printf("\n que haces ??\n");
 
-    for (Item* i = list_first(jugador->inventario); i != NULL; i = list_next(jugador->inventario)) {
-        free(i);
+    if (jugador == NULL || Esc == NULL) {
+        printf("Error: puntero jugador o escenarios es NULL\n");
+        return;
     }
 
+    // Liberar items del inventario actual del jugador
+    Item* i = list_first(jugador->inventario);
+    while (i != NULL) {
+        Item* temp = i;
+        i = list_next(jugador->inventario);
+        free(temp);
+    }
     list_clean(jugador->inventario);
 
+    // Resetear valores del jugador
     jugador->peso_total = 0;
     jugador->puntaje = 0;
     jugador->tiempo_restante = 10;
 
-    int *key_inicio = &id_inicio;
-    jugador->escenario_actual = (Escenario*) map_search(Esc, key_inicio);
-    
-    if (jugador->escenario_actual != NULL && jugador->escenario_actual->id == id_inicio) {
-        printf("¡Partida reiniciada correctamente! Has vuelto al escenario inicial.\n");
-    } else {
-        printf("Error al reiniciar: no se encontró el escenario inicial (ID %d).\n", id_inicio);
+    // Buscar escenario inicial
+    int clave_temp = id_inicio;
+    Escenario* esc_ini = (Escenario*) map_search(Esc, &clave_temp);
+    if (esc_ini == NULL) {
+        printf("Error al reiniciar: escenario inicial (ID %d) no encontrado.\n", id_inicio);
+        return;
     }
+
+    if (esc_ini->items_originales == NULL) {
+        printf("Error: items_originales del escenario inicial es NULL.\n");
+        return;
+    }
+
+    // Liberar items actuales del escenario
+    Item* item_actual = list_first(esc_ini->items);
+    while (item_actual != NULL) {
+        Item* temp = item_actual;
+        item_actual = list_next(esc_ini->items);
+        free(temp);
+    }
+    list_clean(esc_ini->items);
+
+    // Copiar items originales al escenario actual
+    for (Item* item = list_first(esc_ini->items_originales); item != NULL; item = list_next(esc_ini->items_originales)) {
+        Item* copia = malloc(sizeof(Item));
+        if (copia == NULL) {
+            printf("Error al asignar memoria al restaurar items.\n");
+            continue;
+        }
+        strcpy(copia->nombre, item->nombre);
+        copia->valor = item->valor;
+        copia->peso = item->peso;
+        list_pushBack(esc_ini->items, copia);
+    }
+
+    // Asignar escenario inicial al jugador
+    jugador->escenario_actual = esc_ini;
+
+    printf("GAME OVER, te rendiste :/\n");
+    printf("Vas a volver al menu de inicio, intentalo de nuevo!\n");
+    printf("(carga el laberinto nuevamente para una mejor experencia)\n");
 }
 
 void recoger_items(TipoJugador* jugador){
@@ -431,6 +493,7 @@ void recoger_items(TipoJugador* jugador){
         token_str = strtok(NULL, " ");
     }
 
+    // Eliminar items del escenario
     for (Item* item_to_remove_from_scenario = list_first(items_a_eliminar_del_escenario);
     item_to_remove_from_scenario != NULL;
     item_to_remove_from_scenario = list_next(items_a_eliminar_del_escenario)) {
@@ -525,7 +588,7 @@ void iniciar_partida(Map* escenarios) {
                 break;
             case 4:
                 reiniciar_partida(jugador, escenarios, id_inicio);
-                break;
+    
             case 5:
                 printf("Saliendo del juego...\n");
                 
