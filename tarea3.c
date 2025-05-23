@@ -338,14 +338,22 @@ void mostrar_estado(TipoJugador *Jugador){
 }
 
 bool reiniciar_partida(TipoJugador *jugador, Map *Esc, int id_inicio) {
+    char temp[100];
     int opcion;
     printf("\n\nEstas seguro que quieres reiniciar?\nTendras que volver a cargar el laberinto...\n");
     printf("1. Si\n");
     printf("2. No\n");
     printf("Ingrese una opcion: ");
-    scanf("%i", &opcion);
+    
+    scanf("%99s", temp);
     getchar();
 
+    if(!isdigit(temp[0])){
+        printf("Opcion Invalida.\nReanudando Partida...\n");
+        return false;
+    }
+    else opcion = atoi(temp);
+    
     if(opcion == 1){
         if (jugador == NULL || Esc == NULL) {
         printf("Error: puntero jugador o escenarios es NULL\n");
