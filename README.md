@@ -1,0 +1,1 @@
+Al reiniciar hay que volver a cargar el laberinto, porque del caso contrario no apareceran los objetos recogidos
