@@ -11,6 +11,7 @@ typedef struct {
     char nombre[101];
     int valor;
     int peso;
+    struct Escenario* lugar_original;
 } Item;
 
 typedef struct Escenario {
@@ -167,6 +168,7 @@ bool leer_escenarios(Map** escenarios) {
             new_item->nombre[sizeof(new_item->nombre) - 1] = '\0';
             new_item->valor = atoi(list_next(values));
             new_item->peso = atoi(list_next(values));
+            new_item->lugar_original = esc;
 
             list_pushBack(item_list, new_item);
 
@@ -268,6 +270,7 @@ void avanzar_direccion(TipoJugador* jugador, Map* escenarios) {
 
     if (jugador->tiempo_restante <= 0) {
         printf("\nSe acabo el tiempo! GAME OVER.\n");
+        printf("Mejor suerte para la proxima :/");
         return;
     }
 
@@ -511,7 +514,7 @@ void recoger_items(TipoJugador* jugador){
                 seleccionados++;
             }
         } else {
-            printf("Advertencia: La opción '%s' no corresponde a un item válido.\n", token_str);
+            printf("Advertencia: La opción '%s' no corresponde a un item valido.\n", token_str);
         }
 
         token_str = strtok(NULL, " ");
@@ -545,6 +548,166 @@ void recoger_items(TipoJugador* jugador){
         printf("No se recogio ningun item valido o la operación fue cancelada.\n");
     }
 }
+
+void descartar_item(TipoJugador* jugador, char* nombre_item) {
+    if (jugador == NULL || jugador->inventario == NULL) {
+        printf("Error: jugador o inventario es NULL.\n");
+        return;
+    }
+
+    Item* item = list_first(jugador->inventario);
+    while (item != NULL) {
+        if (strcmp(item->nombre, nombre_item) == 0) {
+            jugador->peso_total -= item->peso;
+
+            // Remover el item del inventario (elimina del cursor actual)
+            list_remove(jugador->inventario, item);
+
+            // Verificamos si el item tiene escenario original
+            if (item->lugar_original != NULL && item->lugar_original->items != NULL) {
+                list_pushBack(item->lugar_original->items, item);
+                printf("Has descartado el item \"%s\" y ha sido devuelto al escenario \"%s\".\n", nombre_item, item->lugar_original->nombre);
+            } else {
+                printf("Has descartado el item \"%s\" pero no se encontro su lugar original. Sera eliminado.\n", nombre_item);
+                free(item); // si no tiene lugar_original, lo eliminamos
+            }
+            return;
+        }
+        item = list_next(jugador->inventario);
+    }
+    printf("Item \"%s\" no encontrado en el inventario.\n", nombre_item);
+}
+
+void iniciar_multiplayer(Map* escenarios) {
+    TipoJugador* jugador1 = malloc(sizeof(TipoJugador));
+    TipoJugador* jugador2 = malloc(sizeof(TipoJugador));
+
+    if (jugador1 == NULL || jugador2 == NULL) {
+        perror("Error al asignar memoria para Jugadores");
+        if (jugador1) free(jugador1);
+        if (jugador2) free(jugador2);
+        return;
+    }
+
+    jugador1->inventario = list_create();
+    jugador2->inventario = list_create();
+    jugador1->peso_total = jugador2->peso_total = 0;
+    jugador1->puntaje = jugador2->puntaje = 0;
+    jugador1->tiempo_restante = jugador2->tiempo_restante = 10;
+
+    int id_inicio = 1;
+    int* key_inicio = &id_inicio;
+    jugador1->escenario_actual = map_search(escenarios, key_inicio);
+    jugador2->escenario_actual = map_search(escenarios, key_inicio);
+
+    if (!jugador1->escenario_actual || !jugador2->escenario_actual) {
+        printf("Error: Escenario inicial (ID %d) no encontrado.\n", id_inicio);
+        list_clean(jugador1->inventario); free(jugador1->inventario); free(jugador1);
+        list_clean(jugador2->inventario); free(jugador2->inventario); free(jugador2);
+        return;
+    }
+
+    int turno = 1;
+
+    while (1) {
+        // Verificar si ambos jugadores ya terminaron
+        int j1_termino = jugador1->escenario_actual->es_final || jugador1->tiempo_restante <= 0;
+        int j2_termino = jugador2->escenario_actual->es_final || jugador2->tiempo_restante <= 0;
+        if (j1_termino && j2_termino) break;
+
+        // Solo puede jugar si no ha terminado
+        TipoJugador* jugador = (turno == 1) ? jugador1 : jugador2;
+        if (jugador->escenario_actual->es_final || jugador->tiempo_restante <= 0) {
+            printf("\nJugador %d ya ha terminado su partida. Turno del otro jugador.\n", turno);
+            turno = (turno == 1) ? 2 : 1;
+            continue;
+        }
+
+        printf("\n======= TURNO DEL JUGADOR %d =======\n", turno);
+
+        for (int accion = 0; accion < 2; accion++) {
+            mostrar_estado(jugador);
+            printf("\n--- Accion %d de 2 ---\n", accion + 1);
+            printf("1. Recoger item(s)\n");
+            printf("2. Descartar item(s)\n");
+            printf("3. Avanzar en una direccion\n");
+            printf("4. Reiniciar partida (jugador actual)\n");
+            printf("5. Salir del juego\n");
+            printf("Seleccione una opcion: ");
+
+            int opcion;
+            scanf("%d", &opcion);
+            while (getchar() != '\n');
+
+            if (opcion == 5) {
+                printf("Jugador %d ha salido del juego.\n", turno);
+                goto liberar_recursos;
+            }
+
+            switch (opcion) {
+                case 1:
+                    recoger_items(jugador);
+                    break;
+
+                case 2: {
+                    char nombre_item[101];
+                    printf("Ingrese el nombre del item que desea descartar: ");
+                    scanf(" %[^\n]", nombre_item);
+                    descartar_item(jugador, nombre_item);
+                    break;
+                }
+
+                case 3:
+                    avanzar_direccion(jugador, escenarios);
+                    break;
+
+                case 4:
+                    if (reiniciar_partida(jugador, escenarios, id_inicio)) {
+                        jugador->tiempo_restante = 10;
+                        jugador->puntaje = 0;
+                        jugador->peso_total = 0;
+                        list_clean(jugador->inventario);
+                        jugador->inventario = list_create();
+                        jugador->escenario_actual = map_search(escenarios, key_inicio);
+                    }
+                    break;
+
+                default:
+                    printf("Opcion invalida.\n");
+                    accion--; // repetir la acción
+            }
+
+            // Si terminó por tiempo o final, se rompe el turno
+            if (jugador->escenario_actual->es_final || jugador->tiempo_restante <= 0)
+                break;
+        }
+
+        turno = (turno == 1) ? 2 : 1;
+    }
+
+    // Mostrar resultado final
+    printf("\n===== FIN DE LA PARTIDA =====\n");
+    if (jugador1->escenario_actual->es_final && jugador2->escenario_actual->es_final) {
+        printf("Ambos jugadores han llegado al escenario final!\n");
+    } else {
+        printf("Uno o ambos jugadores se quedaron sin tiempo. GAME OVER.\n");
+    }
+
+    printf("\n--- Puntajes Finales ---\n");
+    printf("Jugador 1: Puntaje = %d | Peso = %d | Tiempo restante = %d\n",
+           jugador1->puntaje, jugador1->peso_total, jugador1->tiempo_restante);
+    printf("Jugador 2: Puntaje = %d | Peso = %d | Tiempo restante = %d\n",
+           jugador2->puntaje, jugador2->peso_total, jugador2->tiempo_restante);
+
+liberar_recursos:
+    for (Item* i = list_first(jugador1->inventario); i != NULL; i = list_next(jugador1->inventario)) free(i);
+    list_clean(jugador1->inventario); free(jugador1->inventario); free(jugador1);
+
+    for (Item* i = list_first(jugador2->inventario); i != NULL; i = list_next(jugador2->inventario)) free(i);
+    list_clean(jugador2->inventario); free(jugador2->inventario); free(jugador2);
+}
+
+
 
 void iniciar_partida(Map* escenarios) {
     TipoJugador* jugador = malloc(sizeof(TipoJugador));
@@ -590,10 +753,13 @@ void iniciar_partida(Map* escenarios) {
                 recoger_items(jugador); 
                 break;
 
-            case 2:
-                printf("Función 'Descartar item(s)' no implementada aún.\n");
-                
+            case 2:{
+                char nombre_item[101];
+                printf("Ingrese el nombre del item que desea descartar: ");
+                scanf(" %[^\n]", nombre_item);
+                descartar_item(jugador, nombre_item);
                 break;
+            }
 
             case 3:
                 avanzar_direccion(jugador,escenarios);
@@ -641,8 +807,9 @@ int main(){
         printf("      ** GraphQuest ** \n");
         printf("=====================================\n");
         printf("1. Cargar Laberinto\n");
-        printf("2. Iniciar Partida\n");
-        printf("3. Salir\n\n"); 
+        printf("2. Iniciar Partida --> (single player)\n");
+        printf("3. Iniciar Partida --> (Multiplayer)\n");
+        printf("4. Salir\n\n"); 
         printf("Ingrese una opcion: ");
         scanf("%d", &opcion);
         while (getchar() != '\n');
@@ -680,8 +847,15 @@ int main(){
                 }
                 iniciar_partida(escenarios);
                 break;
-                
             case 3:
+            if(!laberinto_cargado){
+                printf("Primero debes cargar el laberinto.\n");
+                break;
+            }
+            iniciar_multiplayer(escenarios);
+            break;
+                
+            case 4:
                 printf("Saliendo del programa.\n");
                 if (laberinto_cargado && escenarios != NULL) { 
                     MapPair* pair = map_first(escenarios);
