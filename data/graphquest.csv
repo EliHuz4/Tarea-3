@@ -15,4 +15,3 @@ ID,Nombre,Descripcion,Items,Arriba,Abajo,Izquierda,Derecha,EsFinal
 14,Corredor,"Paredes agrietadas, pasos que se escuchan donde nadie deberia caminar. Un pasillo como para correr y no mirar atras.",,10,-1,13,15,No
 15,Camara secreta,"Una sala oculta con simbolos raros y un mapa brillante. Nada que ver con una oficina de gobierno, esto si que es secreto.","Mapa,10,1",-1,-1,14,16,No
 16,Salida,¡Luz al final del tunel! Pero cuidado... hay salidas que son mas trampas que finales felices.,,-1,-1,-1,-1,Si
-17
