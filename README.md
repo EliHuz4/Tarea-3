@@ -67,6 +67,39 @@ Este sistema ha sido desarrollado en lenguaje C y puede ejecutarse fácilmente u
 
 - Que los objetos descartados se almacenen en el escenario actual de el jugador.
 
+## Tests y validación
+
+El sistema ha sido probado manualmente en escenarios con distintos niveles de complejidad. Se verificaron:
+
+- Carga correcta de múltiples escenarios e ítems desde el archivo CSV.
+- Conectividad adecuada entre escenarios mediante IDs temporales.
+- Reducción progresiva del tiempo al moverse, proporcional al peso.
+- Recolección, descarte y restauración de ítems.
+- Fin de juego por tiempo agotado o llegada al escenario final.
+- Comportamiento correcto en modos singleplayer y multijugador.
+
+Casos límite considerados:
+- Ítems inválidos o inexistentes.
+- Jugador que reinicia en medio del turno.
+- Movimiento a una dirección sin conexión.
+- Descarte de ítem sin lugar original definido.
+
+## Diseño del sistema y estructura de datos
+
+GraphQuest está construido sobre una arquitectura modular en C que utiliza estructuras de datos dinámicas para modelar el mundo del juego.
+
+- **Grafo explícito:** Cada escenario del laberinto es un nodo (`Escenario`) con punteros directos a sus vecinos (`arriba`, `abajo`, `izquierda`, `derecha`), formando un grafo explícito. Esta representación permite una navegación eficiente y clara entre los escenarios.
+
+- **TDAs personalizados (`Map` y `List`):** Se emplean estructuras `Map` para indexar y acceder rápidamente a los escenarios, e implementaciones de `List` para manejar dinámicamente los ítems en escenarios e inventarios.
+
+- **Cargador de CSV robusto:** El archivo `graphquest.csv` contiene los datos del juego. Su lectura se realiza con verificación de errores, control de memoria y separación de campos personalizada.
+
+- **Modularidad:** Las funciones están claramente separadas por propósito (carga, estado, movimiento, recolección, reinicio), facilitando su comprensión y mantenibilidad.
+
+- **Modo multijugador real:** Cada jugador posee su propio estado, inventario y tiempo, pero comparten el mismo grafo. Esto refleja una implementación concurrente en turnos dentro de un entorno compartido.
+
+
+
 ## Ejemplo de uso
 **Paso 0: Menú**
 
