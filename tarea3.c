@@ -592,21 +592,23 @@ void recoger_items(TipoJugador* jugador){ // Funcion para recoger items del esce
     }
 }
 
-void descartar_item(TipoJugador* jugador, char* nombre_item) {
+void descartar_item(TipoJugador* jugador, char* nombre_item) { // Funcion para descartar items del inventario del jugador
+    // Validamos que el puntero al jugador y su inventario no sean NULL
     if (jugador == NULL || jugador->inventario == NULL) {
         printf("Error: jugador o inventario es NULL.\n");
         return;
     }
-
+    // Buscamos el item por nombre dentro del inventario del jugador
     Item* item = list_first(jugador->inventario);
     while (item != NULL) {
+        // Si el nombre coincide se descarta el item
         if (strcmp(item->nombre, nombre_item) == 0) {
-            jugador->peso_total -= item->peso;
+            jugador->peso_total -= item->peso; // Se actualiza el peso del jugador
 
-            // Remover el item del inventario (elimina del cursor actual)
+            // Eliminamos el item del inventario
             list_remove(jugador->inventario, item);
 
-            // Verificamos si el item tiene escenario original
+            // Si el item tiene su escenario de origen valido lo devlvemos a su escenario original
             if (item->lugar_original != NULL && item->lugar_original->items != NULL) {
                 list_pushBack(item->lugar_original->items, item);
                 printf("Has descartado el item \"%s\" y ha sido devuelto al escenario \"%s\".\n", nombre_item, item->lugar_original->nombre);
@@ -614,17 +616,21 @@ void descartar_item(TipoJugador* jugador, char* nombre_item) {
                 printf("Has descartado el item \"%s\" pero no se encontro su lugar original. Sera eliminado.\n", nombre_item);
                 free(item); // si no tiene lugar_original, lo eliminamos
             }
-            return;
+            return; // Retornamos si es que se descarta el item satisfactoriamente
         }
-        item = list_next(jugador->inventario);
+        item = list_next(jugador->inventario); // Continuamos buscando en el inventario
     }
+    // Si luego de todo no se encuentra el item, se muestra un mensaje
     printf("Item \"%s\" no encontrado en el inventario.\n", nombre_item);
 }
 
-void iniciar_multiplayer(Map* escenarios) {
+void iniciar_multiplayer(Map* escenarios) { // Funcion para iniciar la partida para opcion MULTIPLAYER
+    // Creamos los 2 jugadores
     TipoJugador* jugador1 = malloc(sizeof(TipoJugador));
     TipoJugador* jugador2 = malloc(sizeof(TipoJugador));
     int Nplayers = 2;
+
+    // Si uno de los dos jugadores tienen error de asignacion de memoria, muestra error
     if (jugador1 == NULL || jugador2 == NULL) {
         perror("Error al asignar memoria para Jugadores");
         if (jugador1) free(jugador1);
@@ -632,17 +638,20 @@ void iniciar_multiplayer(Map* escenarios) {
         return;
     }
 
+    // Creamos ambos inventarios y se inicializan los valores para cada jugador
     jugador1->inventario = list_create();
     jugador2->inventario = list_create();
     jugador1->peso_total = jugador2->peso_total = 0;
     jugador1->puntaje = jugador2->puntaje = 0;
     jugador1->tiempo_restante = jugador2->tiempo_restante = 10;
 
+    // Inicializamos en el escenario inicial (ID 1)
     int id_inicio = 1;
     int* key_inicio = &id_inicio;
     jugador1->escenario_actual = map_search(escenarios, key_inicio);
     jugador2->escenario_actual = map_search(escenarios, key_inicio);
 
+    // Si no se encuentra el escenario inicial muestra error y libera memoria
     if (!jugador1->escenario_actual || !jugador2->escenario_actual) {
         printf("Error: Escenario inicial (ID %d) no encontrado.\n", id_inicio);
         list_clean(jugador1->inventario); free(jugador1->inventario); free(jugador1);
@@ -650,16 +659,19 @@ void iniciar_multiplayer(Map* escenarios) {
         return;
     }
 
+    // Empieza el primer jugador
     int turno = 1;
 
     while (1) {
-        // Verificar si ambos jugadores ya terminaron
+        // Verificamos si ambos jugadores ya terminaron
         int j1_termino = jugador1->escenario_actual->es_final || jugador1->tiempo_restante <= 0;
         int j2_termino = jugador2->escenario_actual->es_final || jugador2->tiempo_restante <= 0;
         if (j1_termino && j2_termino) break;
 
         // Solo puede jugar si no ha terminado
         TipoJugador* jugador = (turno == 1) ? jugador1 : jugador2;
+
+        // Si un jugador ya termino su partida, se muestra un mensaje y saltamos el turno
         if (jugador->escenario_actual->es_final || jugador->tiempo_restante <= 0) {
             printf("\nJugador %d ya ha terminado su partida. Turno del otro jugador.\n", turno);
             turno = (turno == 1) ? 2 : 1;
@@ -668,6 +680,7 @@ void iniciar_multiplayer(Map* escenarios) {
 
         printf("\n======= TURNO DEL JUGADOR %d =======\n", turno);
 
+        // Para cada jugador se permiten 2 acciones por turno
         for (int accion = 0; accion < 2; accion++) {
             mostrar_estado(jugador);
             printf("\n--- Accion %d de 2 ---\n", accion + 1);
@@ -680,11 +693,11 @@ void iniciar_multiplayer(Map* escenarios) {
 
             int opcion;
             scanf("%d", &opcion);
-            while (getchar() != '\n');
+            while (getchar() != '\n'); // Limpiamos el buffer
 
             if (opcion == 5) {
                 printf("Jugador %d ha salido del juego.\n", turno);
-                goto liberar_recursos;
+                goto liberar_recursos; // Salta todo y va hasta el final
             }
 
             switch (opcion) {
@@ -705,6 +718,7 @@ void iniciar_multiplayer(Map* escenarios) {
                     break;
 
                 case 4:
+                    // Si el jugador reinicia la partida, se libera su inventario y se reinicializan sus valores
                     if (reiniciar_partida(jugador, escenarios, id_inicio, Nplayers)) {
                         jugador->tiempo_restante = 10;
                         jugador->puntaje = 0;
@@ -720,22 +734,23 @@ void iniciar_multiplayer(Map* escenarios) {
                     accion--; // repetir la acción
             }
 
-            // Si terminó por tiempo o final, se rompe el turno
+            // Si termino por tiempo o escenario final, termina el turno
             if (jugador->escenario_actual->es_final || jugador->tiempo_restante <= 0)
                 break;
         }
-
+        // Cambiamos el turno al otro jugador
         turno = (turno == 1) ? 2 : 1;
     }
 
-    // Mostrar resultado final
+    // Mostrar resultado final de la partida
     printf("\n===== FIN DE LA PARTIDA =====\n\n");
-    if (jugador1->escenario_actual->es_final && jugador2->escenario_actual->es_final) {
+    if (jugador1->escenario_actual->es_final && jugador2->escenario_actual->es_final) { // Si ambos ganan
         printf("Ambos jugadores han llegado al escenario final!\n");
-    } else {
+    } else { // Si uno de los dos pierde
         printf("Uno o ambos jugadores se quedaron sin tiempo. GAME OVER.\n");
     }
 
+    // Mostramos los puntajes finales
     printf("\n--- Puntajes Finales ---\n");
     printf("Jugador 1: Puntaje = %d | Peso = %d | Tiempo restante = %d\n",
            jugador1->puntaje, jugador1->peso_total, jugador1->tiempo_restante);
@@ -743,30 +758,35 @@ void iniciar_multiplayer(Map* escenarios) {
            jugador2->puntaje, jugador2->peso_total, jugador2->tiempo_restante);
 
 liberar_recursos:
+    // Se libera la memoria de Jugador 1
     for (Item* i = list_first(jugador1->inventario); i != NULL; i = list_next(jugador1->inventario)) free(i);
     list_clean(jugador1->inventario); free(jugador1->inventario); free(jugador1);
-
+    // Se libera la memoria de Jugador 2
     for (Item* i = list_first(jugador2->inventario); i != NULL; i = list_next(jugador2->inventario)) free(i);
     list_clean(jugador2->inventario); free(jugador2->inventario); free(jugador2);
 }
 
-void iniciar_partida(Map* escenarios) {
+void iniciar_partida(Map* escenarios) { // Funcion para iniciar la partida para opcion SINGLEPLAYER
+    // Creamos al jugador
     TipoJugador* jugador = malloc(sizeof(TipoJugador));
     if (jugador == NULL) {
         perror("Error al asignar memoria para Jugador");
         return;
     }
+
+    // Inicializamos los datos del jugador
     int Nplayers = 1;
     jugador->inventario = list_create();
     jugador->peso_total = 0;
     jugador->puntaje = 0;
     jugador->tiempo_restante = 10;
 
+    // Buscamos el escenario inicial
     int id_inicio = 1;
     int *key_inicio = &id_inicio; 
     jugador->escenario_actual = (Escenario*) map_search(escenarios, key_inicio);
 
-
+    // Si no se encuentra el escenario inicial, muestra error y libera memoria
     if (jugador->escenario_actual == NULL) {
         printf("Error: Escenario inicial (ID %d) no encontrado. Asegurate de que el CSV lo contenga.\n", id_inicio);
         list_clean(jugador->inventario);
@@ -787,7 +807,7 @@ void iniciar_partida(Map* escenarios) {
         printf("Seleccione una opcion: ");
         scanf("%d", &opcion);
 
-        while (getchar() != '\n'); 
+        while (getchar() != '\n'); // Liberamos buffer
 
         switch (opcion) {
             case 1:
@@ -804,9 +824,9 @@ void iniciar_partida(Map* escenarios) {
 
             case 3:
                 avanzar_direccion(jugador,escenarios);
-                
+                // Si el jugador se queda sin tiempo o llega al final, se termina la partida
                 if (jugador->tiempo_restante <= 0 || jugador->escenario_actual->es_final) {
-                    
+                    // Liberamos la memoria del inventario del jugador
                     for (Item* i = list_first(jugador->inventario); i != NULL; i = list_next(jugador->inventario)) {
                         free(i);
                     }
@@ -818,12 +838,12 @@ void iniciar_partida(Map* escenarios) {
                 break;
             case 4:
                 if (reiniciar_partida(jugador, escenarios, id_inicio, Nplayers)) {
-                    return; 
+                    return; // Reiniciamos la partida y volvemos al menu principal
                 }
                 break;
             case 5:
                 printf("Saliendo del juego...\n");
-                
+                // Liberamos la memoria de el inventario del jugador
                 for (Item* i = list_first(jugador->inventario); i != NULL; i = list_next(jugador->inventario)) {
                     free(i);
                 }
@@ -840,12 +860,13 @@ void iniciar_partida(Map* escenarios) {
 // FIN DE LAS FUNCIONES
 
 // MAIN
-int main(){
-    Map* escenarios = NULL;
-    int opcion;
-    bool laberinto_cargado = false;
+int main(){ // Funcion principal del programa
+    Map* escenarios = NULL; // Creamos un puntero a mapa que almacenará los escenarios del laberinto
+    int opcion; // Variable para almacenar la opcion elegida por el usuario
+    bool laberinto_cargado = false; // Flag para indicar si el laberinto fue cargado con exito
 
     do {
+        // Menu principal del juego
         printf("\n=====================================\n");
         printf("      ** GraphQuest ** \n");
         printf("=====================================\n");
@@ -855,55 +876,64 @@ int main(){
         printf("4. Salir\n\n"); 
         printf("Ingrese una opcion: ");
         scanf("%d", &opcion);
-        while (getchar() != '\n');
+        while (getchar() != '\n'); // Limpiamos el buffer
 
         switch (opcion) {
             case 1:
+                // Opcion para cargar el laberinto desde el archivo
                 printf("\nCargando el laberinto...\n");
+                // Si ya hay un laberinto cargado, libera su memoria antes de cargar el archivo
                 if (escenarios != NULL) {
                     printf("Liberando laberinto anterior...\n");
                     MapPair* pair = map_first(escenarios);
                     while (pair != NULL) {
                         Escenario* esc = (Escenario*)pair->value;
+                        // Liberamos los items de los escenarios
                         for (Item* item = list_first(esc->items); item != NULL; item = list_next(esc->items)) {
                             free(item);
                         }
+                        // Liberamos listas y escenarios
                         list_clean(esc->items);
                         free(esc->items);
                         free(pair->key);
                         free(esc);
                         pair = map_next(escenarios);
                     }
+                    // Liberamos Mapas
                     map_clean(escenarios);
                     free(escenarios);
                     escenarios = NULL;
                 }
+                // Cargamos el laberinto 
                 laberinto_cargado = leer_escenarios(&escenarios);
                 if(laberinto_cargado) printf("Laberinto Cargado Correctamente...\n");
                 else printf("Error al cargar el laberinto.\n");
                 break;
 
             case 2:
+                // Si hay un laberinto cargado, se inicia la partida singleplayer 
                 if(!laberinto_cargado){
-                    printf("Primero debes cargar el laberinto.\n");
+                    printf("Primero debes cargar el laberinto.\n"); // Si no hay un laberinto cargado, muestra un mensaje
                     break;
                 }
                 iniciar_partida(escenarios);
                 break;
             case 3:
+                // Si hay un laberinto cargado, se inicia la partida multiplayer 
                 if(!laberinto_cargado){
-                    printf("Primero debes cargar el laberinto.\n");
+                    printf("Primero debes cargar el laberinto.\n"); // Si no hay un laberinto cargado, muestra un mensaje
                     break;
                 }
                 iniciar_multiplayer(escenarios);
                 break;
             case 4:
+                // Salimos del programa y liberamos memoria del laberinto cargado (Si es que hay uno cargado)
                 printf("Saliendo del programa.\n");
                 if (laberinto_cargado && escenarios != NULL) { 
                     MapPair* pair = map_first(escenarios);
                     while (pair != NULL) {
                         Escenario* esc = (Escenario*)pair->value;
-                        
+                        // Liberamos items
                         for (Item* item = list_first(esc->items); item != NULL; item = list_next(esc->items)) {
                             free(item);
                         }
@@ -917,13 +947,14 @@ int main(){
                     free(escenarios);
                     escenarios = NULL;
                 }
-                return 0;
+                return 0; // Fin del programa
                 
             default:
+                // Opcion invalida
                 printf("\nOpcion invalida. Por favor, intente de nuevo.\n");
         }
-    } while (opcion != 4);
+    } while (opcion != 4); // Repetimos el bucle hasta que la opcion sea "Salir"
 
-    return 0;
+    return 0; // Fin del programa (Asegurandonos que luego de la opcion 4 se finalice el programa)
 }
 // FIN DEL MAIN

@@ -61,6 +61,7 @@ Este sistema ha sido desarrollado en lenguaje C y puede ejecutarse fácilmente u
 - Al reiniciar la partida hay que volver a cargar el laberinto, del caso contrario no apareceran los objetos recogidos.
 - No se puede iniciar el multiplayer luego de el singleplayer sin antes haber cargado nuevamente el laberinto.
 - No se puede iniciar el singleplayer luego de el multiplayer sin antes haber cargado nuevamente el laberinto.
+- En el modo MultiPlayer: si un jugador toma un item y reinicia la partida el item no reaparece.
 
 ### A mejorar:
 
