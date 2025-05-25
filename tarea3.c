@@ -752,10 +752,21 @@ void iniciar_multiplayer(Map* escenarios) { // Funcion para iniciar la partida p
 
     // Mostramos los puntajes finales
     printf("\n--- Puntajes Finales ---\n");
+
     printf("Jugador 1: Puntaje = %d | Peso = %d | Tiempo restante = %d\n",
            jugador1->puntaje, jugador1->peso_total, jugador1->tiempo_restante);
     printf("Jugador 2: Puntaje = %d | Peso = %d | Tiempo restante = %d\n",
            jugador2->puntaje, jugador2->peso_total, jugador2->tiempo_restante);
+    
+    printf("\n--- Inventario del Equipo ---\n");
+
+    for (Item* i = list_first(jugador1->inventario); i != NULL; i = list_next(jugador1->inventario)){
+        printf(" - %s\n", i->nombre);
+    }
+
+    for (Item* i = list_first(jugador2->inventario); i != NULL; i = list_next(jugador2->inventario)){
+        printf(" - %s\n", i->nombre);
+    }
 
 liberar_recursos:
     // Se libera la memoria de Jugador 1
