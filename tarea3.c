@@ -365,12 +365,13 @@ void mostrar_estado(TipoJugador *Jugador){ // Funcion que muestra toda la inform
         printf("   - Derecha: (No hay camino)\n");
 }
 
-bool reiniciar_partida(TipoJugador *jugador, Map *Esc, int id_inicio) { // Funcion para reiniciar la partida de el jugador
+bool reiniciar_partida(TipoJugador *jugador, Map *Esc, int id_inicio, int Nplayers) { // Funcion para reiniciar la partida de el jugador
     char temp[100];
     int opcion;
-
+    
     // Mostramos un submenu de confirmacion
-    printf("\n\nEstas seguro que quieres reiniciar?\nTendras que volver a cargar el laberinto...\n");
+    printf("\n\nEstas seguro que quieres reiniciar?\n");
+    if(Nplayers == 1 ) printf("Tendras que volver a cargar el laberinto...\n");
     printf("1. Si\n");
     printf("2. No\n");
     printf("Ingrese una opcion: ");
@@ -623,7 +624,7 @@ void descartar_item(TipoJugador* jugador, char* nombre_item) {
 void iniciar_multiplayer(Map* escenarios) {
     TipoJugador* jugador1 = malloc(sizeof(TipoJugador));
     TipoJugador* jugador2 = malloc(sizeof(TipoJugador));
-
+    int Nplayers = 2;
     if (jugador1 == NULL || jugador2 == NULL) {
         perror("Error al asignar memoria para Jugadores");
         if (jugador1) free(jugador1);
@@ -674,7 +675,7 @@ void iniciar_multiplayer(Map* escenarios) {
             printf("2. Descartar item(s)\n");
             printf("3. Avanzar en una direccion\n");
             printf("4. Reiniciar partida (jugador actual)\n");
-            printf("5. Salir del juego\n");
+            printf("5. Salir de la partida\n");
             printf("Seleccione una opcion: ");
 
             int opcion;
@@ -704,7 +705,7 @@ void iniciar_multiplayer(Map* escenarios) {
                     break;
 
                 case 4:
-                    if (reiniciar_partida(jugador, escenarios, id_inicio)) {
+                    if (reiniciar_partida(jugador, escenarios, id_inicio, Nplayers)) {
                         jugador->tiempo_restante = 10;
                         jugador->puntaje = 0;
                         jugador->peso_total = 0;
@@ -755,7 +756,7 @@ void iniciar_partida(Map* escenarios) {
         perror("Error al asignar memoria para Jugador");
         return;
     }
-
+    int Nplayers = 1;
     jugador->inventario = list_create();
     jugador->peso_total = 0;
     jugador->puntaje = 0;
@@ -782,7 +783,7 @@ void iniciar_partida(Map* escenarios) {
         printf("2. Descartar item(s)\n");
         printf("3. Avanzar en una direccion\n");
         printf("4. Reiniciar partida\n");
-        printf("5. Salir del juego\n");
+        printf("5. Salir de la partida\n");
         printf("Seleccione una opcion: ");
         scanf("%d", &opcion);
 
@@ -816,7 +817,7 @@ void iniciar_partida(Map* escenarios) {
                 }
                 break;
             case 4:
-                if (reiniciar_partida(jugador, escenarios, id_inicio)) {
+                if (reiniciar_partida(jugador, escenarios, id_inicio, Nplayers)) {
                     return; 
                 }
                 break;
