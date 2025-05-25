@@ -7,7 +7,7 @@
 Tú eres el héroe (o los héroes): Juega solo o únete a un amigo para una experiencia cooperativa inolvidable.
 Exploración y estrategia: Navega por diversos escenarios, pero ¡cuidado! El tiempo es limitado y un movimiento en falso podría significar el fin de tu partida.
 Decisiones cruciales: Cada objeto recolectado y cada camino elegido te acerca o te aleja de la victoria. ¿Serás capaz de tomar las decisiones correctas bajo presión?
-Competencia global: Demuestra tu habilidad y agilidad mental para convertirte en el mejor GraphQuester del mundo, un verdadero explorador nato.
+Demuestra tu habilidad y agilidad mental para convertirte en el mejor GraphQuester del mundo, un verdadero explorador nato.
 GraphQuest no es solo un juego, es un desafío. ¿Estás listo para aceptarlo?
 
 ¡Juega ahora y demuestra que tienes lo necesario para dominar el arte de la exploración estratégica!
@@ -272,4 +272,19 @@ Saliendo del programa.
 
 ```
 
-**CODIGO CREADO POR NESTOR CALDERON Y MATIAS SALAS**
+## Contribuciones
+---
+**Nestor Calderón**
+- Desarrolló maqueta del codigo.
+- Diseñó funciones base para funcionamiento del programa.
+- Definió structs base para el funcionamiento del programa.
+- Corrigió errores varios.
+- Confeccionó el algoritmo del Main.
+---
+**Matías Salas**
+- Corrigió errores varios.
+- Documentación y comentarios en el codigo.
+- Diseñó y redactó el README.
+- Diseñó el algoritmo de funciones.
+- Organizó la logistica del área de trabajo (GitHub).
+---
