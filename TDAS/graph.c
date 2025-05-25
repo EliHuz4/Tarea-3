@@ -3,7 +3,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-// LIST
+// LIST 
 // Crea una nueva lista vacía.
 List *list_create() {
     List *list = (List *)malloc(sizeof(List));
