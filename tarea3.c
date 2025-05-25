@@ -8,7 +8,6 @@
 #include <assert.h>
 #include <ctype.h>
 #include "TDAS/graph.h" //Incluimos el archivo "graph.h", que contiene funciones LIST, MAP y EXTRAS
-#include "TDAS/graph.c"
 // FIN DE LAS LIBRERIAS
 
 // STRUCTS
@@ -546,6 +545,7 @@ void recoger_items(TipoJugador* jugador){ // Funcion para recoger items del esce
                 strcpy(copia_item_inventario->nombre, selected_item_ptr->nombre);
                 copia_item_inventario->valor = selected_item_ptr->valor;
                 copia_item_inventario->peso = selected_item_ptr->peso;
+                copia_item_inventario->lugar_original = jugador->escenario_actual; // Asignamos el escenario actual como lugar_original
 
                 // Añadimos el item al inventario y actualizamos los datos de el jugador
                 list_pushBack(jugador->inventario, copia_item_inventario);
@@ -555,7 +555,7 @@ void recoger_items(TipoJugador* jugador){ // Funcion para recoger items del esce
                 seleccionados++;
             }
         } else { // Si la opcion no esta asociada a un item, se muestra un mensaje
-            printf("Advertencia: La opción '%s' no corresponde a un item valido.\n", token_str);
+            printf("Advertencia: La opcion '%s' no corresponde a un item valido.\n", token_str);
         }
 
         token_str = strtok(NULL, " ");
@@ -587,7 +587,7 @@ void recoger_items(TipoJugador* jugador){ // Funcion para recoger items del esce
         jugador->tiempo_restante -= 1;
         printf("%d item(s) recogido(s) - Tiempo restante: %d\n", seleccionados, jugador->tiempo_restante);
     } else { // Si no se seleccionaron items se muestra un mensaje
-        printf("No se recogio ningun item valido o la operación fue cancelada.\n");
+        printf("No se recogio ningun item valido o la operacion fue cancelada.\n");
     }
 }
 
